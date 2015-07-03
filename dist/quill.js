@@ -5858,12 +5858,31 @@ Document = (function() {
   };
 
   Document.prototype.getJSON = function() {
-    var line, objects;
+    var line, list, objects, prevLine;
     line = this.lines.first;
     objects = [];
+    list = false;
     while (line) {
-      objects.push(line.getJSON());
+      if (line.node.nodeName === 'LI') {
+        if (list) {
+          list.data.push(line.getJSON());
+        } else {
+          list = {
+            type: 'list',
+            data: [line.getJSON()]
+          };
+        }
+      } else if (prevLine === 'LI' && list) {
+        objects.push(list);
+        list = false;
+      } else {
+        objects.push(line.getJSON());
+      }
+      prevLine = line.node.nodeName;
       line = line.next;
+    }
+    if (prevLine === 'LI' && list) {
+      objects.push(list);
     }
     return objects;
   };
