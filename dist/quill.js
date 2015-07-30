@@ -5798,6 +5798,20 @@ Document = (function() {
     return this.insertEmbedBefore(embedNode, null, type, data);
   };
 
+  Document.prototype.appendList = function(data) {
+    var newList;
+    newList = document.createElement(dom.DEFAULT_LIST_TAG);
+    _.each(data, (function(_this) {
+      return function(item) {
+        var newLine;
+        newLine = document.createElement(dom.DEFAULT_LIST_ITEM_TAG);
+        newLine.innerHTML = item;
+        return newList.appendChild(newLine);
+      };
+    })(this));
+    return this.root.appendChild(newList);
+  };
+
   Document.prototype.findLeafAt = function(index, inclusive) {
     var line, offset, _ref;
     _ref = this.findLineAt(index), line = _ref[0], offset = _ref[1];
@@ -5863,7 +5877,7 @@ Document = (function() {
     objects = [];
     list = false;
     while (line) {
-      if (line.node.nodeName === 'LI') {
+      if (line.node.nodeName === dom.DEFAULT_LIST_ITEM_TAG) {
         if (list) {
           list.data.push(line.getJSON());
         } else {
@@ -5872,16 +5886,17 @@ Document = (function() {
             data: [line.getJSON()]
           };
         }
-      } else if (prevLine === 'LI' && list) {
-        objects.push(list);
-        list = false;
       } else {
+        if (prevLine === dom.DEFAULT_LIST_ITEM_TAG && list) {
+          objects.push(list);
+          list = false;
+        }
         objects.push(line.getJSON());
       }
       prevLine = line.node.nodeName;
       line = line.next;
     }
-    if (prevLine === 'LI' && list) {
+    if (prevLine === dom.DEFAULT_LIST_ITEM_TAG && list) {
       objects.push(list);
     }
     return objects;
@@ -6006,6 +6021,11 @@ Document = (function() {
         if (line.type === 'paragraph') {
           newLine = _this.appendLine(document.createElement(dom.DEFAULT_BLOCK_TAG));
           return newLine.node.innerHTML = line.data;
+        } else if (line.type === 'list') {
+          return _this.appendList(line.data);
+        } else if (line.type === 'header') {
+          newLine = _this.appendLine(document.createElement(line.data.size));
+          return newLine.node.innerHTML = line.data.content;
         } else {
           return newEmbed = _this.appendEmbed(document.createElement(dom.DEFAULT_EMBED_TAG), line.type, line.data);
         }
@@ -6828,7 +6848,17 @@ Line = (function(_super) {
   }
 
   Line.prototype.getJSON = function() {
-    return this.node.innerHTML;
+    if (this.isHeader()) {
+      return {
+        type: 'header',
+        data: {
+          content: this.node.innerHTML,
+          size: this.node.tagName
+        }
+      };
+    } else {
+      return this.node.innerHTML;
+    }
   };
 
   Line.prototype.buildLeaves = function(node, formats) {
@@ -6963,6 +6993,24 @@ Line = (function(_super) {
       leaf = nextLeaf;
     }
     return this.rebuild();
+  };
+
+  Line.prototype.isHeader = function() {
+    var _ref;
+    return (_ref = this.node.tagName) === 'H1' || _ref === 'H2' || _ref === 'H3';
+  };
+
+  Line.prototype.formatHeader = function(size) {
+    var line;
+    if (size === this.node.tagName) {
+      line = document.createElement('DIV');
+    } else {
+      line = document.createElement(size);
+    }
+    line.className = 'ql-line';
+    line.innerHTML = this.node.innerHTML;
+    dom(this.node).replace(line);
+    return this.node = line;
   };
 
   Line.prototype.insertText = function(offset, text, formats) {
@@ -7917,6 +7965,8 @@ dom = _.extend(dom, {
   DEFAULT_EMBED_TAG: 'DIV',
   DEFAULT_BREAK_TAG: 'BR',
   DEFAULT_INLINE_TAG: 'SPAN',
+  DEFAULT_LIST_TAG: 'UL',
+  DEFAULT_LIST_ITEM_TAG: 'LI',
   EMBED_TEXT: '!',
   FONT_SIZES: {
     '10px': 1,
@@ -7982,7 +8032,13 @@ dom = _.extend(dom, {
   LINE_TAGS: {
     'P': 'P',
     'DIV': 'DIV',
-    'LI': 'LI'
+    'LI': 'LI',
+    'H1': 'H1',
+    'H2': 'H2',
+    'H3': 'H3',
+    'H4': 'H4',
+    'H5': 'H5',
+    'H6': 'H6'
   },
   LIST_TAGS: {
     'OL': 'OL',
@@ -8171,7 +8227,10 @@ Normalizer = {
     'OL': 'OL',
     'UL': 'UL',
     'LI': 'LI',
-    'P': 'P'
+    'P': 'P',
+    'H1': 'H1',
+    'H2': 'H2',
+    'H3': 'H3'
   },
   handleBreaks: function(lineNode) {
     var breaks;
@@ -9345,7 +9404,8 @@ Toolbar = (function() {
       'link': 'link',
       'list': 'list',
       'strike': 'strike',
-      'underline': 'underline'
+      'underline': 'underline',
+      'header': 'header'
     },
     TOOLTIP: {
       'image': 'image',
@@ -10287,7 +10347,7 @@ module.exports = Quill;
 
 
 },{"../package.json":7,"./core/editor":9,"./core/format":11,"./lib/dom":17,"./lib/range":21,"./themes/base":33,"./themes/snow":34,"eventemitter2":2,"lodash":1,"rich-text/lib/delta":3}],32:[function(_dereq_,module,exports){
-module.exports = ".ql-image-tooltip{padding:10px;width:300px}.ql-image-tooltip:after{clear:both;content:\"\";display:table}.ql-image-tooltip a{border:1px solid #000;box-sizing:border-box;display:inline-block;float:left;padding:5px;text-align:center;width:50%}.ql-image-tooltip img{bottom:0;left:0;margin:auto;max-height:100%;max-width:100%;position:absolute;right:0;top:0}.ql-image-tooltip .input{box-sizing:border-box;width:100%}.ql-image-tooltip .preview{margin:10px 0;position:relative;border:1px dashed #000;height:200px}.ql-image-tooltip .preview span{display:inline-block;position:absolute;text-align:center;top:40%;width:100%}.ql-link-tooltip{padding:5px 10px}.ql-link-tooltip input.input{width:170px}.ql-link-tooltip a.done,.ql-link-tooltip input.input{display:none}.ql-link-tooltip.editing a.done,.ql-link-tooltip.editing input.input{display:inline-block}.ql-link-tooltip.editing a.change,.ql-link-tooltip.editing a.url{display:none}.ql-multi-cursor{position:absolute;left:0;top:0;z-index:1000}.ql-multi-cursor .cursor{margin-left:-1px;position:absolute}.ql-multi-cursor .cursor-flag{bottom:100%;position:absolute;white-space:nowrap}.ql-multi-cursor .cursor-name{display:inline-block;color:#fff;padding:2px 8px}.ql-multi-cursor .cursor-caret{height:100%;position:absolute;width:2px}.ql-multi-cursor .cursor.hidden .cursor-flag{display:none}.ql-multi-cursor .cursor.top .cursor-flag{bottom:auto;top:100%}.ql-multi-cursor .cursor.right .cursor-flag{right:-2px}.ql-paste-manager{left:-100000px;position:absolute;top:50%}.ql-toolbar{box-sizing:border-box}.ql-tooltip{background-color:#fff;border:1px solid #000;box-sizing:border-box;position:absolute;top:0;white-space:nowrap;z-index:2000}.ql-tooltip a{cursor:pointer;text-decoration:none}.ql-container{box-sizing:border-box;cursor:text;font-family:Helvetica,Arial,sans-serif;font-size:13px;height:100%;line-height:1.42;margin:0;overflow-x:hidden;overflow-y:auto;padding:12px 15px;position:relative}.ql-editor{box-sizing:border-box;min-height:100%;outline:0;tab-size:4;white-space:pre-wrap}.ql-editor div{margin:0;padding:0}.ql-editor a{text-decoration:underline}.ql-editor b{font-weight:700}.ql-editor i{font-style:italic}.ql-editor s{text-decoration:line-through}.ql-editor u{text-decoration:underline}.ql-editor img{max-width:100%}.ql-editor blockquote,.ql-editor ol,.ql-editor ul{margin:0 0 0 2em;padding:0}.ql-editor ol{list-style-type:decimal}.ql-editor ul{list-style-type:disc}.ql-editor.ql-ie-10 br,.ql-editor.ql-ie-9 br{display:none}";
+module.exports = ".ql-image-tooltip{padding:10px;width:300px}.ql-image-tooltip:after{clear:both;content:\"\";display:table}.ql-image-tooltip a{border:1px solid #000;box-sizing:border-box;display:inline-block;float:left;padding:5px;text-align:center;width:50%}.ql-image-tooltip img{bottom:0;left:0;margin:auto;max-height:100%;max-width:100%;position:absolute;right:0;top:0}.ql-image-tooltip .input{box-sizing:border-box;width:100%}.ql-image-tooltip .preview{margin:10px 0;position:relative;border:1px dashed #000;height:200px}.ql-image-tooltip .preview span{display:inline-block;position:absolute;text-align:center;top:40%;width:100%}.ql-link-tooltip{padding:5px 10px}.ql-link-tooltip input.input{width:170px}.ql-link-tooltip a.done,.ql-link-tooltip input.input{display:none}.ql-link-tooltip.editing a.done,.ql-link-tooltip.editing input.input{display:inline-block}.ql-link-tooltip.editing a.change,.ql-link-tooltip.editing a.url{display:none}.ql-multi-cursor{position:absolute;left:0;top:0;z-index:1000}.ql-multi-cursor .cursor{margin-left:-1px;position:absolute}.ql-multi-cursor .cursor-flag{bottom:100%;position:absolute;white-space:nowrap}.ql-multi-cursor .cursor-name{display:inline-block;color:#fff;padding:2px 8px}.ql-multi-cursor .cursor-caret{height:100%;position:absolute;width:2px}.ql-multi-cursor .cursor.hidden .cursor-flag{display:none}.ql-multi-cursor .cursor.top .cursor-flag{bottom:auto;top:100%}.ql-multi-cursor .cursor.right .cursor-flag{right:-2px}.ql-paste-manager{left:-100000px;position:absolute;top:50%}.ql-toolbar{box-sizing:border-box}.ql-tooltip{background-color:#fff;border:1px solid #000;box-sizing:border-box;position:absolute;top:0;white-space:nowrap;z-index:2000}.ql-tooltip a{cursor:pointer;text-decoration:none}.ql-container{box-sizing:border-box;cursor:text;font-family:Helvetica,Arial,sans-serif;font-size:13px;height:100%;line-height:1.42;margin:0;overflow-x:hidden;overflow-y:auto;padding:12px 15px;position:relative}.ql-editor{box-sizing:border-box;min-height:100%;outline:0;tab-size:4;white-space:pre-wrap}.ql-editor>div{margin:0;padding:0}.ql-editor a{text-decoration:underline}.ql-editor b{font-weight:700}.ql-editor i{font-style:italic}.ql-editor s{text-decoration:line-through}.ql-editor u{text-decoration:underline}.ql-editor img{max-width:100%}.ql-editor blockquote,.ql-editor ol,.ql-editor ul{margin:0 0 0 2em;padding:0}.ql-editor ol{list-style-type:decimal}.ql-editor ul{list-style-type:disc}.ql-editor.ql-ie-10 br,.ql-editor.ql-ie-9 br{display:none}";
 },{}],33:[function(_dereq_,module,exports){
 var BaseTheme, baseStyles, dom, _;
 
